@@ -6,26 +6,27 @@ public class Lipid {
     private final int compoundId;
     private final String name;
     private final String formula;
-    private final String lipidType; // !! OPTIONAL TODO -> TRANSFORM INTO AN ENUMERATION
+    private final LipidType lipidType;
     private final int carbonCount;
     private final int doubleBondsCount;
 
-
     /**
-     * @param compoundId
-     * @param name
-     * @param formula
-     * @param lipidType
-     * @param carbonCount
-     * @param doubleBondCount
+     * Constructor to define a lipid compound
+     *
+     * @param compoundId        unique identifier
+     * @param name              human-readable name (e.g., "TG 54:3")
+     * @param formula           chemical formula
+     * @param lipidType         enum indicating lipid class (e.g., TG, PC)
+     * @param carbonCount       number of carbon atoms
+     * @param doubleBondsCount  number of double bonds
      */
-    public Lipid(int compoundId, String name, String formula, String lipidType, int carbonCount, int doubleBondCount) {
+    public Lipid(int compoundId, String name, String formula, LipidType lipidType, int carbonCount, int doubleBondsCount) {
         this.compoundId = compoundId;
         this.name = name;
         this.formula = formula;
         this.lipidType = lipidType;
         this.carbonCount = carbonCount;
-        this.doubleBondsCount = doubleBondCount;
+        this.doubleBondsCount = doubleBondsCount;
     }
 
     public int getCompoundId() {
@@ -40,8 +41,8 @@ public class Lipid {
         return formula;
     }
 
-    public String getLipidType() {
-        return this.lipidType;
+    public LipidType getLipidType() {
+        return lipidType;
     }
 
     public int getCarbonCount() {
@@ -70,9 +71,10 @@ public class Lipid {
                 "compoundId=" + compoundId +
                 ", name='" + name + '\'' +
                 ", formula='" + formula + '\'' +
-                ", lipidType='" + lipidType + '\'' +
+                ", lipidType=" + lipidType +
                 ", carbonCount=" + carbonCount +
-                ", doubleBondCount=" + doubleBondsCount +
+                ", doubleBondsCount=" + doubleBondsCount +
                 '}';
     }
 }
+
