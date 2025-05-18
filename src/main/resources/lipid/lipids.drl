@@ -1,15 +1,20 @@
-
 package lipid;
 
 unit LipidScoreUnit;
 
-// TODO Include here rules and queries to fulfill the practice requirements
+import lipid.Annotation;
+import lipid.LipidType;
+import lipid.Lipid;
+import lipid.Peak;
 
+
+// DONE----TODO Include here rules and queries to fulfill the practice requirements
 
 // This is one example of rules that only prints the factorial combination of all pairs eliminating the A-A combination.
 // !! TODO This rule does not include the lipid type, you shall add it.
 // !! TODO Rule that states that the same lipid type with the same number of double bonds and a higher number of carbons should have a higher RT
 // !! TODO
+/*
 rule "Score 1 for lipid pair with increasing RT and carbon count"
 when
     $a1 : /annotations [$rt1 : rtMin, $carbonCount1 : lipid.getCarbonCount(), $doubleBondCount : lipid.getDoubleBondsCount()]
@@ -21,7 +26,169 @@ then
     $a2.addScore(1);
     // !! TODO ONLY FOR DEBUGGING
     System.out.println("Scored 1 for annotations: " + $a1 + " and " + $a2);
-end
+end */
 
 
 // !! TODO NEXT RULE: Negative evidence. If the RT follows the opposite order than the previous one, then the addScore should be -1.
+
+
+/**
+ * Function used in Rules 3 and 6 to assign a numerical order to lipid types.
+ * The lower the index, the earlier it should elute in chromatography.
+ */
+function int getLipidTypeIndex(LipidType type) {
+    if (type == LipidType.PG) return 0;
+    if (type == LipidType.PE) return 1;
+    if (type == LipidType.PI) return 2;
+    if (type == LipidType.PA) return 3;
+    if (type == LipidType.PS) return 4;
+    if (type == LipidType.PC) return 5;
+    return -1; // Unknown or undefined
+}
+
+//////////////////////////////////////////////////////
+// Rule 1: POSITIVE evidence based on carbon count //
+//////////////////////////////////////////////////////
+/*
+RT(L1) > RT(L2) if:
+- Same lipid type
+- Same double bond count
+- L1 has less carbons than L2
+*/
+rule "Rule 1: Score +1 if more carbon elutes later"
+when
+    $a1: /annotations[$lipid1: lipid, $rt1: rtMin]
+    $a2: /annotations[
+        lipid.lipidType == $lipid1.lipidType,
+        lipid.doubleBondsCount == $lipid1.doubleBondsCount,
+        lipid.carbonCount < $lipid1.carbonCount,
+        rtMin < $rt1
+    ]
+then
+    $a1.addScore(1);
+    $a2.addScore(1);
+    System.out.println("Rule 1 applied\n Scored +1 for annotations: " + $a1 + " and " + $a2);
+end
+
+/////////////////////////////////////////////////////////////
+// Rule 2: POSITIVE evidence based on double bond count   //
+/////////////////////////////////////////////////////////////
+/*
+RT(L1) > RT(L2) if:
+- Same lipid type
+- Same carbon count
+- L1 has more double bonds than L2
+*/
+rule "Rule 2: Score +1 if fewer double bonds elutes later"
+when
+    $a1: /annotations[$lipid1: lipid, $rt1: rtMin]
+    $a2: /annotations[
+        lipid.lipidType == $lipid1.lipidType,
+        lipid.carbonCount == $lipid1.carbonCount,
+        lipid.doubleBondsCount > $lipid1.doubleBondsCount,
+        rtMin < $rt1
+    ]
+then
+    $a1.addScore(1);
+    $a2.addScore(1);
+    System.out.println("Rule 2 applied\n Scored +1 for annotations: " + $a1 + " and " + $a2);
+end
+
+/////////////////////////////////////////////////////////////
+// Rule 3: POSITIVE evidence based on lipid type hierarchy //
+/////////////////////////////////////////////////////////////
+/*
+RT(L1) > RT(L2) if:
+- Different lipid types
+- Same carbon and double bond count
+- L1 type is higher in elution order (e.g., PC > PG)
+*/
+rule "Rule 3: Score +1 if lipid type elutes in expected order"
+when
+    $a1: /annotations[$lipid1: lipid, $rt1: rtMin]
+    $a2: /annotations[
+        lipid.lipidType != $lipid1.lipidType,
+        lipid.carbonCount == $lipid1.carbonCount,
+        lipid.doubleBondsCount == $lipid1.doubleBondsCount,
+        eval(getLipidTypeIndex(lipid.lipidType) < getLipidTypeIndex($lipid1.lipidType)),
+        rtMin < $rt1
+        ]
+then
+    $a1.addScore(1);
+    $a2.addScore(1);
+    System.out.println("Rule 3 applied\n Scored +1 for annotations: " + $a1 + " and " + $a2);
+end
+
+//////////////////////////////////////////////////////
+// Rule 4: NEGATIVE evidence — wrong carbon order   //
+//////////////////////////////////////////////////////
+/*
+RT(L1) < RT(L2) if:
+- Same lipid type
+- Same double bond count
+- L1 has more carbons but elutes earlier
+*/
+rule "Rule 4: Score -1 if more carbon elutes earlier"
+when
+    $a1: /annotations[$lipid1: lipid, $rt1: rtMin]
+    $a2: /annotations[
+        lipid.lipidType == $lipid1.lipidType,
+        lipid.doubleBondsCount == $lipid1.doubleBondsCount,
+        lipid.carbonCount < $lipid1.carbonCount,
+        rtMin > $rt1
+    ]
+then
+    $a1.addScore(-1);
+    $a2.addScore(-1);
+    System.out.println("Rule 4 applied\n Scored -1 for annotations: " + $a1 + " and " + $a2);
+end
+
+/////////////////////////////////////////////////////////
+// Rule 5: NEGATIVE evidence — wrong DB order         //
+/////////////////////////////////////////////////////////
+/*
+RT(L1) < RT(L2) if:
+- Same lipid type
+- Same carbon count
+- L1 has fewer double bonds but elutes earlier
+*/
+rule "Rule 5: Score -1 if fewer DBs elute earlier"
+when
+    $a1: /annotations[$lipid1: lipid, $rt1: rtMin]
+    $a2: /annotations[
+        lipid.lipidType == $lipid1.lipidType,
+        lipid.carbonCount == $lipid1.carbonCount,
+        lipid.doubleBondsCount > $lipid1.doubleBondsCount,
+        rtMin > $rt1
+    ]
+then
+    $a1.addScore(-1);
+    $a2.addScore(-1);
+    System.out.println("Rule 5 applied\n Scored -1 for annotations: " + $a1 + " and " + $a2);
+end
+
+/////////////////////////////////////////////////////////
+// Rule 6: NEGATIVE evidence — lipid type wrong order //
+/////////////////////////////////////////////////////////
+/*
+RT(L1) < RT(L2) if:
+- Different lipid types
+- Same carbon and DB count
+- L1 is expected to elute later (PC > PG), but elutes earlier
+*/
+rule "Rule 6: Score -1 if lipid type elutes in wrong order"
+when
+    $a1: /annotations[$lipid1: lipid, $rt1: rtMin]
+    $a2: /annotations[
+        lipid.lipidType != $lipid1.lipidType,
+        lipid.carbonCount == $lipid1.carbonCount,
+        lipid.doubleBondsCount == $lipid1.doubleBondsCount,
+        eval(getLipidTypeIndex(lipid.lipidType) < getLipidTypeIndex($lipid1.lipidType)),
+        rtMin > $rt1
+    ]
+then
+    $a1.addScore(-1);
+    $a2.addScore(-1);
+    System.out.println("Rule 6 applied\n Scored -1 for annotations: " + $a1 + " and " + $a2);
+end
+
